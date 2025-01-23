@@ -33,13 +33,18 @@ MEL_PARAMS = {
     "hop_length": 300
 }
 
+# Modify dataset directory
+data_dir = "./data"
+
 class MelDataset(torch.utils.data.Dataset):
     def __init__(self,
                  data_list,
                  sr=24000,
                  validation=False,
+                 data_dir=''
                  ):
 
+        self.data_dir = data_dir
         _data_list = [l[:-1].split('|') for l in data_list]
         self.data_list = [(path, int(label)) for path, label in _data_list]
         self.data_list_per_class = {
@@ -88,6 +93,7 @@ class MelDataset(torch.utils.data.Dataset):
 
     def _load_tensor(self, data):
         wave_path, label = data
+        wave_path = self.data_dir + wave_path
         label = int(label)
         wave, sr = sf.read(wave_path)
         wave_tensor = torch.from_numpy(wave).float()
@@ -142,7 +148,7 @@ def build_dataloader(path_list,
                      collate_config={},
                      dataset_config={}):
 
-    dataset = MelDataset(path_list, validation=validation)
+    dataset = MelDataset(path_list, validation=validation, data_dir=data_dir)
     collate_fn = Collater(**collate_config)
     data_loader = DataLoader(dataset,
                              batch_size=batch_size,
