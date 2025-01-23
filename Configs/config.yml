@@ -1,4 +1,4 @@
-log_dir: "Models/VCTK20"
+log_dir: "Models/common_voice_fr"
 save_freq: 2
 device: "cuda"
 epochs: 150
@@ -7,8 +7,9 @@ pretrained_model: ""
 load_only_params: false
 fp16_run: true
 
-train_data: "Data/train_list.txt"
-val_data: "Data/val_list.txt"
+data_dir:
+train_data: "Data/train_list_fr.txt"
+val_data: "Data/val_list_fr.txt"
 
 F0_path: "Utils/JDC/bst.t7"
 ASR_config: "Utils/ASR/config.yml"
