@@ -13,6 +13,7 @@ import torch.nn.functional as F
 
 from torch import nn
 from torch.utils.data import DataLoader
+from pathlib import Path
 
 import logging
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ MEL_PARAMS = {
 }
 
 # Modify dataset directory
-data_dir = "./data"
+data_dir = "C:/Users/quang/Desktop/Dataset/Voice_Conversion/Data_common_voice"
 
 class MelDataset(torch.utils.data.Dataset):
     def __init__(self,
@@ -94,6 +95,8 @@ class MelDataset(torch.utils.data.Dataset):
     def _load_tensor(self, data):
         wave_path, label = data
         wave_path = self.data_dir + wave_path
+        print(f'data_dir: {self.data_dir}')
+        print(f'wave_path: {wave_path}')
         label = int(label)
         wave, sr = sf.read(wave_path)
         wave_tensor = torch.from_numpy(wave).float()
