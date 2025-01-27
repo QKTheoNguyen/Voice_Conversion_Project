@@ -7,13 +7,13 @@ pretrained_model: ""
 load_only_params: false
 fp16_run: true
 
-data_dir:
-train_data: "Data/train_list_fr.txt"
-val_data: "Data/val_list_fr.txt"
+data_dir: "/content/drive/MyDrive/Voice_Conversion_Dataset"
+train_data: "/content/Voice_Conversion_Project/Data/train_list_fr.txt"
+val_data: "/content/Voice_Conversion_Project/Data/val_list_fr.txt"
 
-F0_path: "Utils/JDC/bst.t7"
-ASR_config: "Utils/ASR/config.yml"
-ASR_path: "Utils/ASR/epoch_00100.pth"
+F0_path: "/content/Voice_Conversion_Project/Utils/JDC/bst.t7"
+ASR_config: "/content/Voice_Conversion_Project/Utils/ASR/config.yml"
+ASR_path: "/content/Voice_Conversion_Project/Utils/ASR/epoch_00100.pth"
 
 preprocess_params:
   sr: 24000

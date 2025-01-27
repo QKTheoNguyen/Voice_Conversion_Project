@@ -18,5 +18,14 @@ The dataset is preprocessed using the following steps:
 - Extract the audio files from the dataset
 - Extract metadata from the dataset
 - Selection of the speakers to be used in the training (based on the number of utterances) and grouping them into directories
-- Cutting the audio files on speaking segments using a Voice Activity Detection algorithm (Silero VAD) and resampling them to 16kHz
+- Cutting the audio files on speaking segments using a Voice Activity Detection algorithm (Silero VAD) and resampling them to 24kHz
 
+# To reproduce 
+
+- Clone this repository
+- Install the requirements
+- Download the Delta segments 17.0, 18.0, 19.0 and 20.0 of the Common Voice french corpus
+- Regroup the mp3 files in a single directory
+- Run the preprocessing script ```rewrite_wav.ipynb```
+- Modify paths to the dataset in the ```config.yaml``` file
+- Run the training script ```python train.py --config_path ./Configs/config.yml```
