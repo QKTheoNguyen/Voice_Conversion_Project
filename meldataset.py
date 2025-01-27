@@ -95,8 +95,6 @@ class MelDataset(torch.utils.data.Dataset):
     def _load_tensor(self, data):
         wave_path, label = data
         wave_path = self.data_dir + wave_path
-        print(f'data_dir: {self.data_dir}')
-        print(f'wave_path: {wave_path}')
         label = int(label)
         wave, sr = sf.read(wave_path)
         wave_tensor = torch.from_numpy(wave).float()
