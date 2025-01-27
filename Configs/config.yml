@@ -1,4 +1,4 @@
-log_dir: "Models/common_voice_fr"
+log_dir: "/content/drive/MyDrive/Voice_Conversion_Dataset/Models/common_voice_fr"
 save_freq: 2
 device: "cuda"
 epochs: 150
