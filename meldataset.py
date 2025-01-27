@@ -34,7 +34,7 @@ MEL_PARAMS = {
 }
 
 # Modify dataset directory
-data_dir = "C:/Users/quang/Desktop/Dataset/Voice_Conversion/Data_common_voice"
+data_dir = "/content/drive/MyDrive/Voice_Conversion_Dataset"
 
 class MelDataset(torch.utils.data.Dataset):
     def __init__(self,
