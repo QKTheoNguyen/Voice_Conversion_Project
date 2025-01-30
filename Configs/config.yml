@@ -3,7 +3,7 @@ save_freq: 2
 device: "cuda"
 epochs: 150
 batch_size: 5
-pretrained_model: ""
+pretrained_model: "/content/drive/MyDrive/Voice_Conversion_Dataset/Models/common_voice_fr/epoch_00012.pth"
 load_only_params: false
 fp16_run: true
 
