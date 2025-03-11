@@ -90,7 +90,7 @@ if __name__ == "__main__":
 
     # load vocoder
     from parallel_wavegan.utils import load_model
-    vocoder = load_model(path_vocoder).to('cuda').eval()
+    vocoder = load_model(path_vocoder, weights_only=True).to('cuda').eval()
     vocoder.remove_weight_norm()
     _ = vocoder.eval()
 
