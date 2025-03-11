@@ -83,14 +83,14 @@ if __name__ == "__main__":
     # load F0 model
 
     F0_model = JDCNet(num_class=1, seq_len=192)
-    params = torch.load(path_jdc)['net']
+    params = torch.load(path_jdc, weights_only=True)['net']
     F0_model.load_state_dict(params)
     _ = F0_model.eval()
     F0_model = F0_model.to('cuda')
 
     # load vocoder
     from parallel_wavegan.utils import load_model
-    vocoder = load_model(path_vocoder, weights_only=True).to('cuda').eval()
+    vocoder = load_model(path_vocoder).to('cuda').eval()
     vocoder.remove_weight_norm()
     _ = vocoder.eval()
 
