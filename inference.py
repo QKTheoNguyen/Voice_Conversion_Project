@@ -15,8 +15,6 @@ from models import Generator, MappingNetwork, StyleEncoder
 
 path_jdc = "/content/Voice_Conversion_Project/Utils/JDC/bst.t7"
 path_vocoder = "/content/Voice_Conversion_Project/Vocoder/checkpoint-400000steps.pkl"
-model_path = "/content/drive/MyDrive/Voice_Conversion_Dataset/Models/common_voice_fr/epoch_00150.pth"
-path_config = "/content/drive/MyDrive/Voice_Conversion_Dataset/Models/common_voice_fr/config.yml"
 
 # mel spectrogram transformation
 
@@ -78,6 +76,9 @@ if __name__ == "__main__":
     parser.add_argument("--output_file", type=str, default="output.wav")
     args = parser.parse_args()
 
+    model_path = args.model
+    path_config = args.config
+
     ### load models
 
     # load F0 model
@@ -99,7 +100,7 @@ if __name__ == "__main__":
     with open(path_config) as f:
         starganv2_config = yaml.safe_load(f)
     starganv2 = build_model(model_params=starganv2_config["model_params"])
-    params = torch.load(model_path, map_location='cpu')
+    params = torch.load(model_path, weights_only=True, map_location='cpu')
     params = params['model_ema']
     _ = [starganv2[key].load_state_dict(params[key]) for key in starganv2]
     _ = [starganv2[key].eval() for key in starganv2]
