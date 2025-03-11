@@ -44,25 +44,44 @@ def build_model(model_params={}):
 
     return nets_ema
 
-def compute_style(speaker_dicts, starganv2):
-    reference_embeddings = {}
-    for key, (path, speaker) in speaker_dicts.items():
-        if path == "":
-            label = torch.LongTensor([speaker]).to('cuda')
-            latent_dim = starganv2.mapping_network.shared[0].in_features
-            ref = starganv2.mapping_network(torch.randn(1, latent_dim).to('cuda'), label)
-        else:
-            wave, sr = librosa.load(path, sr=24000)
-            audio, index = librosa.effects.trim(wave, top_db=30)
-            if sr != 24000:
-                wave = librosa.resample(wave, sr, 24000)
-            mel_tensor = preprocess(wave).to('cuda')
+# def compute_style(speaker_dicts, starganv2):
+#     reference_embeddings = {}
+#     for key, (path, speaker) in speaker_dicts.items():
+#         if path == "":
+#             label = torch.LongTensor([speaker]).to('cuda')
+#             latent_dim = starganv2.mapping_network.shared[0].in_features
+#             ref = starganv2.mapping_network(torch.randn(1, latent_dim).to('cuda'), label)
+#         else:
+#             wave, sr = librosa.load(path, sr=24000)
+#             audio, index = librosa.effects.trim(wave, top_db=30)
+#             if sr != 24000:
+#                 wave = librosa.resample(wave, sr, 24000)
+#             mel_tensor = preprocess(wave).to('cuda')
 
-            with torch.no_grad():
-                label = torch.LongTensor([speaker])
-                ref = starganv2.style_encoder(mel_tensor.unsqueeze(1), label)
-        reference_embeddings[key] = (ref, label)
+#             with torch.no_grad():
+#                 label = torch.LongTensor([speaker])
+#                 ref = starganv2.style_encoder(mel_tensor.unsqueeze(1), label)
+#         reference_embeddings[key] = (ref, label)
     
+#     return reference_embeddings
+
+def compute_style(audio_path, speaker, starganv2):
+    if audio_path == "":
+        label = torch.LongTensor([speaker]).to('cuda')
+        latent_dim = starganv2.mapping_network.shared[0].in_features
+        ref = starganv2.mapping_network(torch.randn(1, latent_dim).to('cuda'), label)
+    else:
+        wave, sr = librosa.load(audio_path, sr=24000)
+        audio, index = librosa.effects.trim(wave, top_db=30)
+        if sr != 24000:
+            wave = librosa.resample(wave, sr, 24000)
+        mel_tensor = preprocess(wave).to('cuda')
+
+        with torch.no_grad():
+            label = torch.LongTensor([speaker])
+            ref = starganv2.style_encoder(mel_tensor.unsqueeze(1), label)
+    reference_embeddings = (ref, label)
+
     return reference_embeddings
 
 if __name__ == "__main__":
@@ -121,7 +140,7 @@ if __name__ == "__main__":
 
         selected_speaker = args.speaker1
         target_speaker = args.speaker2
-        speaker_dicts[selected_speaker] = {(args.audio_file, speakers.index(selected_speaker))}
+        speaker_dicts[selected_speaker] = {(args.audio_file, selected_speaker)}
 
         reference_embeddings = compute_style(speaker_dicts, starganv2)
 
@@ -131,32 +150,48 @@ if __name__ == "__main__":
         reconstructed_samples = {}
         converted_mels = {}
 
-        for key, (ref, _) in reference_embeddings.items():
-            with torch.no_grad():
-                f0_feat = F0_model.get_feature_GAN(source.unsqueeze(1))
-                out = starganv2.generator(source.unsqueeze(1), ref, F0=f0_feat)
+        # for key, (ref, _) in reference_embeddings.items():
+        #     with torch.no_grad():
+        #         f0_feat = F0_model.get_feature_GAN(source.unsqueeze(1))
+        #         out = starganv2.generator(source.unsqueeze(1), ref, F0=f0_feat)
                 
-                c = out.transpose(-1, -2).squeeze().to('cuda')
-                y_out = vocoder.inference(c)
-                y_out = y_out.view(-1).cpu()
+        #         c = out.transpose(-1, -2).squeeze().to('cuda')
+        #         y_out = vocoder.inference(c)
+        #         y_out = y_out.view(-1).cpu()
 
-                if key not in speaker_dicts or speaker_dicts[key][0] == "":
-                    recon = None
-                else:
-                    wave, sr = librosa.load(speaker_dicts[key][0], sr=24000)
-                    mel = preprocess(wave)
-                    c = mel.transpose(-1, -2).squeeze().to('cuda')
-                    recon = vocoder.inference(c)
-                    recon = recon.view(-1).cpu().numpy()
+        #         if key not in speaker_dicts or speaker_dicts[key][0] == "":
+        #             recon = None
+        #         else:
+        #             wave, sr = librosa.load(speaker_dicts[key][0], sr=24000)
+        #             mel = preprocess(wave)
+        #             c = mel.transpose(-1, -2).squeeze().to('cuda')
+        #             recon = vocoder.inference(c)
+        #             recon = recon.view(-1).cpu().numpy()
 
-            converted_samples[key] = y_out.numpy()
-            reconstructed_samples[key] = recon
+        #     converted_samples[key] = y_out.numpy()
+        #     reconstructed_samples[key] = recon
 
-            converted_mels[key] = out
+        #     converted_mels[key] = out
             
-            keys.append(key)
+        #     keys.append(key)
 
-        for key, wave in converted_samples.items():
-            print('Converted: %s' % key)
-            if reconstructed_samples[key] is not None:
-                librosa.output.write_wav(args.output_file, reconstructed_samples[key], 24000)
+        with torch.no_grad():
+            f0_feat = F0_model.get_feature_GAN(source.unsqueeze(1))
+            out = starganv2.generator(source.unsqueeze(1), reference_embeddings, F0=f0_feat)
+            
+            c = out.transpose(-1, -2).squeeze().to('cuda')
+            y_out = vocoder.inference(c)
+            y_out = y_out.view(-1).cpu()
+
+            wave, sr = librosa.load(args.audio_file, sr=24000)
+            mel = preprocess(wave)
+            c = mel.transpose(-1, -2).squeeze().to('cuda')
+            recon = vocoder.inference(c)
+            recon = recon.view(-1).cpu().numpy()
+
+        # for key, wave in converted_samples.items():
+        #     print('Converted: %s' % key)
+        #     if reconstructed_samples[key] is not None:
+        #         librosa.output.write_wav(args.output_file, reconstructed_samples[key], 24000)
+
+        librosa.output.write_wav(args.output_file, recon, 24000)
