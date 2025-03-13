@@ -16,6 +16,9 @@ from models import Generator, MappingNetwork, StyleEncoder
 path_jdc = "/content/Voice_Conversion_Project/Utils/JDC/bst.t7"
 path_vocoder = "/content/Voice_Conversion_Project/Vocoder/checkpoint-400000steps.pkl"
 
+# speakers info
+speakers = [f"{i:03d}" for i in range(2, 21)]
+
 # mel spectrogram transformation
 
 to_mel = torchaudio.transforms.MelSpectrogram(
@@ -44,28 +47,9 @@ def build_model(model_params={}):
 
     return nets_ema
 
-# def compute_style(speaker_dicts, starganv2):
-#     reference_embeddings = {}
-#     for key, (path, speaker) in speaker_dicts.items():
-#         if path == "":
-#             label = torch.LongTensor([speaker]).to('cuda')
-#             latent_dim = starganv2.mapping_network.shared[0].in_features
-#             ref = starganv2.mapping_network(torch.randn(1, latent_dim).to('cuda'), label)
-#         else:
-#             wave, sr = librosa.load(path, sr=24000)
-#             audio, index = librosa.effects.trim(wave, top_db=30)
-#             if sr != 24000:
-#                 wave = librosa.resample(wave, sr, 24000)
-#             mel_tensor = preprocess(wave).to('cuda')
+def compute_style(speaker_tuple, starganv2):
 
-#             with torch.no_grad():
-#                 label = torch.LongTensor([speaker])
-#                 ref = starganv2.style_encoder(mel_tensor.unsqueeze(1), label)
-#         reference_embeddings[key] = (ref, label)
-    
-#     return reference_embeddings
-
-def compute_style(audio_path, speaker, starganv2):
+    audio_path, speaker = speaker_tuple
     if audio_path == "":
         label = torch.LongTensor([speaker]).to('cuda')
         latent_dim = starganv2.mapping_network.shared[0].in_features
@@ -87,11 +71,11 @@ def compute_style(audio_path, speaker, starganv2):
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str, default="Models/common_voice/epoch_00070.pth")
-    parser.add_argument("--config", type=str, default="Models/common_voice/config.yaml")
-    parser.add_argument("--audio_file", type=str, default="demo")
-    parser.add_argument("--speaker1", type=int)
-    parser.add_argument("--speaker2", type=int)
+    parser.add_argument("--model", type=str, default="Models/common_voice/epoch_00070.pth", required=True)
+    parser.add_argument("--config", type=str, default="Models/common_voice/config.yaml", required=True)
+    parser.add_argument("--audio_file_source", type=str, default="", help="Path to the source audio file", required=True)
+    parser.add_argument("--speaker_target", type=int, help="Target speaker ID", required=True)
+    parser.add_argument("--audio_file_target", type=str, default="")
     parser.add_argument("--output_file", type=str, default="output.wav")
     args = parser.parse_args()
 
@@ -128,56 +112,28 @@ if __name__ == "__main__":
     starganv2.generator = starganv2.generator.to('cuda')
 
     speakers = [f"{i:03d}" for i in range(2, 21)]
-    speaker_dicts = {}
 
     ### load input audio
 
     if args.audio_file != "demo":
 
-        audio, source_sr = librosa.load(args.audio_file, sr=24000)
+        audio, source_sr = librosa.load(args.audio_file_source, sr=24000)
         audio = audio / np.max(np.abs(audio))
         audio.dtype = np.float32
 
         selected_speaker = args.speaker1
         target_speaker = args.speaker2
-        speaker_dicts[selected_speaker] = {(args.audio_file, selected_speaker)}
+        speaker_tuple = (args.audio_file_target, speakers.index(target_speaker))
 
-        reference_embeddings = compute_style(speaker_dicts, starganv2)
+        reference_embeddings = compute_style(speaker_tuple, starganv2)
 
         source = preprocess(audio).to('cuda:0')
-        keys = []
-        converted_samples = {}
-        reconstructed_samples = {}
-        converted_mels = {}
 
-        # for key, (ref, _) in reference_embeddings.items():
-        #     with torch.no_grad():
-        #         f0_feat = F0_model.get_feature_GAN(source.unsqueeze(1))
-        #         out = starganv2.generator(source.unsqueeze(1), ref, F0=f0_feat)
-                
-        #         c = out.transpose(-1, -2).squeeze().to('cuda')
-        #         y_out = vocoder.inference(c)
-        #         y_out = y_out.view(-1).cpu()
-
-        #         if key not in speaker_dicts or speaker_dicts[key][0] == "":
-        #             recon = None
-        #         else:
-        #             wave, sr = librosa.load(speaker_dicts[key][0], sr=24000)
-        #             mel = preprocess(wave)
-        #             c = mel.transpose(-1, -2).squeeze().to('cuda')
-        #             recon = vocoder.inference(c)
-        #             recon = recon.view(-1).cpu().numpy()
-
-        #     converted_samples[key] = y_out.numpy()
-        #     reconstructed_samples[key] = recon
-
-        #     converted_mels[key] = out
-            
-        #     keys.append(key)
+        ref, _ = reference_embeddings
 
         with torch.no_grad():
             f0_feat = F0_model.get_feature_GAN(source.unsqueeze(1))
-            out = starganv2.generator(source.unsqueeze(1), reference_embeddings, F0=f0_feat)
+            out = starganv2.generator(source.unsqueeze(1), ref, F0=f0_feat)
             
             c = out.transpose(-1, -2).squeeze().to('cuda')
             y_out = vocoder.inference(c)
@@ -189,9 +145,5 @@ if __name__ == "__main__":
             recon = vocoder.inference(c)
             recon = recon.view(-1).cpu().numpy()
 
-        # for key, wave in converted_samples.items():
-        #     print('Converted: %s' % key)
-        #     if reconstructed_samples[key] is not None:
-        #         librosa.output.write_wav(args.output_file, reconstructed_samples[key], 24000)
-
+        print(f"Saving conversion to speaker {target_speaker} to {args.output_file}")
         librosa.output.write_wav(args.output_file, recon, 24000)
