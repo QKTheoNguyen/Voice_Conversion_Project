@@ -115,15 +115,14 @@ if __name__ == "__main__":
 
     ### load input audio
 
-    if args.audio_file != "demo":
+    if args.audio_file_target != "demo":
 
         audio, source_sr = librosa.load(args.audio_file_source, sr=24000)
         audio = audio / np.max(np.abs(audio))
         audio.dtype = np.float32
 
-        selected_speaker = args.speaker1
-        target_speaker = args.speaker2
-        speaker_tuple = (args.audio_file_target, speakers.index(target_speaker))
+        target_speaker = args.speaker_target
+        speaker_tuple = (args.audio_file_target, target_speaker)
 
         reference_embeddings = compute_style(speaker_tuple, starganv2)
 
@@ -139,11 +138,15 @@ if __name__ == "__main__":
             y_out = vocoder.inference(c)
             y_out = y_out.view(-1).cpu()
 
-            wave, sr = librosa.load(args.audio_file, sr=24000)
+            wave, sr = librosa.load(args.audio_file_source, sr=24000)
             mel = preprocess(wave)
             c = mel.transpose(-1, -2).squeeze().to('cuda')
             recon = vocoder.inference(c)
             recon = recon.view(-1).cpu().numpy()
+            audio_out = recon.reshape(-1, 1)
 
         print(f"Saving conversion to speaker {target_speaker} to {args.output_file}")
-        librosa.output.write_wav(args.output_file, recon, 24000)
+        
+        from scipy.io.wavfile import write
+        write(args.output_file, 24000, audio_out)
+
