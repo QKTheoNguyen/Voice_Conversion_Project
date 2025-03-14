@@ -136,14 +136,14 @@ if __name__ == "__main__":
             
             c = out.transpose(-1, -2).squeeze().to('cuda')
             y_out = vocoder.inference(c)
-            y_out = y_out.view(-1).cpu()
+            y_out = y_out.view(-1).cpu().numpy()
 
             wave, sr = librosa.load(args.audio_file_source, sr=24000)
             mel = preprocess(wave)
             c = mel.transpose(-1, -2).squeeze().to('cuda')
             recon = vocoder.inference(c)
             recon = recon.view(-1).cpu().numpy()
-            audio_out = recon.reshape(-1, 1)
+            audio_out = y_out.reshape(-1, 1)
 
         print(f"Saving conversion to speaker {target_speaker} to {args.output_file}")
         
